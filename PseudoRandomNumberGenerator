@@ -38,7 +38,7 @@ contract rand {
 	}
 
 	// maintenance
-	// call to setup the owner
+	// call from contract to setup the owner
 	function nominateOwner(address _NewOwner) public {
 		if ( msg.sender == Supervisor ) 
 			if ( !Owned ) {
