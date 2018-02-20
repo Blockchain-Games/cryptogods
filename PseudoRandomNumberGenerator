@@ -7,30 +7,13 @@ contract rand {
     address private Owner;
     address private NewOwner;
 	address public Supervisor;
+	
 	uint public LastValue;
 	bool public Owned;
 
 	function rand() public {
-        Owner = 0;
 	    Supervisor = msg.sender;
-		LastValue = uint(Owner) & now;
-		Owned = false;
-	}
-
-	function setOwner(address _NewOwner) public {
-		if ( msg.sender == Supervisor ) 
-			if ( !Owned ) {
-				NewOwner = _NewOwner;
-		}
-	}
-    
-    function acceptOwnership() public {
-		if ( msg.sender == NewOwner ) 
-			if ( !Owned ) {
-				Owner = NewOwner;
-                NewOwner = 0x0;
-                Owned = true;
-		}
+		LastValue = uint(Supervisor) & now;
 	}
 
 	function nextValue() public payable returns (uint) {
@@ -48,8 +31,43 @@ contract rand {
 		}
 		return LastValue;
 	}
+	
+	// accept random payments for entropy
+	function() public payable {
+		nextValue();
+	}
 
 	// maintenance
+	// call to setup the owner
+	function nominateOwner(address _NewOwner) public {
+		if ( msg.sender == Supervisor ) 
+			if ( !Owned ) {
+				NewOwner = _NewOwner;
+		}
+	}
+    
+	// acceptOwnership's sender will likely be a contract, perhaps coins which pay a dividend to us when the fallback is called.
+	// If we do that we should include something like:
+	// 	contract c {
+	// 		function acceptOwnership();	// prototype contract and function
+	//	}
+	//	...
+	//	contract coin {
+	// 		...
+	// 		function authorisePayments(address contractToAuthorise) {
+	//     		c newContract = c(contractToAuthorise);
+	//			newContract.acceptOwnership();		// call acceptOwnership() of pointed to contract (common function name)
+	//		}
+	//	}
+    function acceptOwnership() public {
+		if ( msg.sender == NewOwner ) 
+			if ( !Owned ) {
+				Owner = NewOwner;
+                NewOwner = 0x0;
+                Owned = true;
+		}
+	}
+	
 	function die() public {
 		if ( msg.sender == Supervisor ) {
 			if ( Owned ) selfdestruct(Owner);
