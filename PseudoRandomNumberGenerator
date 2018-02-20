@@ -1,0 +1,58 @@
+// A pRNG I made in case we need almost random numbers
+// for safety, do not have owner == supervisor
+
+pragma solidity ^0.4.18;
+
+contract rand {
+    address private Owner;
+    address private NewOwner;
+	address public Supervisor;
+	uint public LastValue;
+	bool public Owned;
+
+	function rand() public {
+        Owner = 0;
+	    Supervisor = msg.sender;
+		LastValue = uint(Owner) & now;
+		Owned = false;
+	}
+
+	function setOwner(address _NewOwner) public {
+		if ( msg.sender == Supervisor ) 
+			if ( !Owned ) {
+				NewOwner = _NewOwner;
+		}
+	}
+    
+    function acceptOwnership() public {
+		if ( msg.sender == NewOwner ) 
+			if ( !Owned ) {
+				Owner = NewOwner;
+                NewOwner = 0x0;
+                Owned = true;
+		}
+	}
+
+	function nextValue() public payable returns (uint) {
+		if ( msg.value > 0 ) {
+		    if ( this.balance > 150 finney ) 
+		        if ( Owned ) Owner.transfer( this.balance - 50 finney );
+		    LastValue ^= LastValue << (now % 256);
+		    LastValue ^= LastValue >> (msg.value % 128);
+	    	LastValue ^= LastValue << (now % 64);
+	    	LastValue ^= LastValue >> (now % 32);
+	    	LastValue ^= LastValue << (uint(msg.sender) % 16);
+	    	LastValue ^= LastValue >> (now % 8);
+            
+	    	LastValue ^= now;
+		}
+		return LastValue;
+	}
+
+	// maintenance
+	function die() public {
+		if ( msg.sender == Supervisor ) {
+			if ( Owned ) selfdestruct(Owner);
+		}
+	}
+}
