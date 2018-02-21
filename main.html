@@ -1,8 +1,173 @@
+<!DOCTYPE html>
+<!--
+Author: Jesse
+More information: see our git
+-->
+
 <html>
   <head>
-    <title>Cryptogods - May the power of Zeus be with you</title>
+    <meta charset="utf-8">
+    <title>Raffle Time! - Get lucky today</title>
+    <script>
+      var network = "unknown";
+      var gameContract = "";
+      var raffle;
+      var ticketsRemaining;
+      
+      function checkWeb3() {
+        if (typeof web3 !== 'undefined') {
+          console.log('Found MetaMask!');
+          web3 = new Web3(web3.currentProvider);
+        } else {
+          console.log('No web3? You should consider trying MetaMask!')
+          // fallback
+          web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+        }
+        setup_contract();
+        find_network();
+        run_js();
+      }
+      
+      function setup_contract() {
+        var abi = [ { 
+          "constant": false, "inputs": [], "name": "die", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" 
+        }, { 
+          "name": "NumberOfPlayers", 
+          "type": "function",
+          "constant": true, 
+          "inputs": [], 
+          "outputs": [ { "name": "", "type": "uint256" } ], 
+          "payable": false, 
+          "stateMutability": "view"
+        }, {
+          "name": "play", 
+          "type": "function",
+          "constant": false,
+          "inputs": [], 
+          "outputs": [ { "name": "", "type": "uint256" } ], 
+          "payable": true, 
+          "stateMutability": "payable"
+        }, { 
+          "name": "PreviousWinningTicket", 
+          "type": "function", 
+          "constant": true, 
+          "inputs": [], 
+          "outputs": [ { "name": "", "type": "uint256" } ], 
+          "payable": false, 
+          "stateMutability": "view" 
+        }, { 
+          "constant": true, "inputs": [], "name": "PreviousWinner", "outputs": [ { "name": "", "type": "address" } ], "payable": false, "stateMutability": "view", "type": "function" 
+        }, {
+          "constant": true,
+          "inputs": [],
+          "name": "TicketsRemaining",
+          "outputs": [ { "name": "", "type": "uint256" } ],
+          "payable": false,
+          "stateMutability": "view",
+          "type": "function" 
+        }, { 
+          "inputs": [], "payable": false, "stateMutability": "nonpayable", "type": "constructor" 
+        }, { 
+          "payable": true, "stateMutability": "payable", "type": "fallback" 
+        }, { 
+          "anonymous": false, 
+          "inputs": [ { "indexed": false, "name": "User", "type": "address" }, 
+                      { "indexed": false, "name": "NumberOfTicketsBought", "type": "uint256" } ], 
+          "name": "TicketSale", "type": "event" 
+        }, { 
+          "anonymous": false, 
+          "inputs": [ { "indexed": false, "name": "Winner", "type": "address" }, 
+                      { "indexed": false, "name": "TicketNumber", "type": "uint256" } ], 
+          "name": "TicketDraw", "type": "event" 
+        } ];
+        var game = web3.eth.contract(abi);
+      }
+      
+      function find_network() {
+        function callback(error, result) {
+          var output = "";
+          if (!error) {
+            if(result > 1000000000000) {
+              output = "testrpc";
+            } else {
+              switch (result) {
+                case "1":
+                  output = "mainnet";
+                  break
+                case "2":
+                  output = "morden";
+                  break
+                case "3":
+                  output = "ropsten";
+                  break
+                case "4":
+                  output = "rinkeby";
+                  raffle = game.at('0xd8cd553c81c4b5143b37ead453514fc89c07396d');
+                  break
+                default:
+                  output = "unknown network = " + result;
+              }
+            }
+          } else {
+            output = "Error";
+          }
+          network = output;
+          console.log('found ' + network);
+          document.getElementById('networkID').innerHTML = network;
+        }
+        
+        console.log('finding Network:');
+        web3.version.getNetwork(callback);
+      }
+      
+      // example non modifying function call
+      function run_js() {
+        function callback(error, result) {
+          if (!error) {
+            ticketsRemaining = result;
+            document.getElementById('TicketsRemaining').innerHTML = 'Tickets Remaining: ' + ticketsRemaining;
+          } else {
+            document.getElementById('TicketsRemaining').innerHTML = 'Unknown';
+            console.log('tickets cant be found');
+          }
+        }
+        
+        raffle.TicketsRemaining.call(callback);
+      }
+      
+      // example function call sending eth
+      function buy25Tickets() {
+        var transactionObject = {
+          value: web3.toWei(0.025), 
+          gas: 40000
+        };
+        
+        function callback(error, result) {
+          if (!error) {
+            console.log('tickets bought: ' + result);
+          } else {
+            console.log('tickets cant be purchased for some reason');
+          }
+        }
+        
+        raffle.play.sendTransaction(transactionObject, callback);
+      }
+    </script>
   </head>
   <body>
-    <h1>An Ethereum game of godly proportions</h1>
+    <script>
+      window.addEventListener('load', checkWeb3());
+    </script>
+    <h1>test data:</h1>
+      <div id="networkID"></div>
+
+    <h1>Ether Raffle</h1>
+    <h2>How to play:</h2>
+      <p>1. Tickets cost 1 Finney (0.001 ETH) each</p>
+      <p>2. Draw occurs automatically when 1000 tickets have been sold</p>
+      <p>3. Winner gets 888 Finney [hint: don't buy more than 887 tickets ;-D]</p>
+      <p><div id="TicketsRemaining">data not found</div></p>
+      <input type="button" value="buy 25 tickets" onclick="buy25Tickets();" />
   </body>
 </html>
+
