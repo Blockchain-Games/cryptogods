@@ -1,0 +1,121 @@
+contract raffle {
+    event TicketSale(address User, uint NumberOfTicketsBought);
+    event TicketDraw(address Winner, uint TicketNumber);
+    
+    address private Owner;
+	uint constant Prize = 888 finney;
+	uint constant MaximumTickets = Prize / (1 finney) * 11 / 10;
+
+	struct _TicketHolder {
+		address Player;
+		uint TicketsHeld;
+	}
+	
+	// Get a random number generator, deploy RNG first and
+	// replace ??? with contract address ID.
+	rand RandomNumber = rand(???);
+
+	// Previous games data
+    address public PreviousWinner;
+	uint public PreviousWinningTicket;
+
+	// This games data;
+	mapping(uint => _TicketHolder) private TicketHolder;
+
+	uint public TicketsRemaining;
+	uint public NumberOfPlayers;
+
+	function raffle() public {
+		Owner = msg.sender;
+		PreviousWinner = 0;
+		PreviousWinningTicket = 0;
+		resetGame();
+	}
+
+	function findPlayer(address CurrentPlayer) private returns (uint) {
+		uint PlayerIndex = 0;
+
+		// Find index of current player, if it exists
+		while ( PlayerIndex != NumberOfPlayers ) {
+			if ( TicketHolder[PlayerIndex].Player == CurrentPlayer ) break;
+			PlayerIndex++;
+		}
+
+		// Increase current player count when a new player arrives
+		if ( PlayerIndex >= NumberOfPlayers ) {
+			NumberOfPlayers++;
+			TicketHolder[PlayerIndex].Player = CurrentPlayer;
+			// Clear previous game’s tickets
+			TicketHolder[PlayerIndex].TicketsHeld = 0;
+		}
+
+		return PlayerIndex;
+	}
+
+	function pickWinner() private returns (address) {
+		// buy a new random number and process it into a ticket
+		uint TicketCount = RandomNumber.nextValue.value(this.balance - Prize - 16 finney)() % MaximumTickets;
+
+		// find the lucky ticket
+		PreviousWinningTicket = TicketCount;
+		uint WinningPlayer = 0;
+		while ( TicketCount > TicketHolder[WinningPlayer].TicketsHeld ) {
+		    TicketCount -= TicketHolder[WinningPlayer].TicketsHeld;
+		    WinningPlayer++;
+		}
+		PreviousWinner = TicketHolder[WinningPlayer].Player;
+		return PreviousWinner;
+	}
+
+	function resetGame() private {
+		TicketsRemaining = MaximumTickets;
+		NumberOfPlayers = 0;
+	}
+
+	function play() public payable returns (uint) {
+	    if ( msg.value == 0 ) return;
+
+		uint PlayerIndex = findPlayer(msg.sender);
+
+		// Find how many tickets this person wants
+		uint RequestedTickets = msg.value / ( 1 finney );
+
+		// Set up a refund for unround amounts
+		uint PlayerRefund = msg.value % ( 1 finney );
+
+		// Refund excess when more tickets are being purchased than available
+		if ( RequestedTickets > TicketsRemaining ) {
+			// Only sell as many tickets as we have remaining
+			uint ExtraTickets = RequestedTickets - TicketsRemaining;
+			PlayerRefund += ExtraTickets * 1 finney;
+			RequestedTickets -= ExtraTickets;
+		}
+		msg.sender.transfer(PlayerRefund);
+
+		// give them their tickets
+		TicketHolder[PlayerIndex].TicketsHeld += RequestedTickets;
+		TicketsRemaining -= RequestedTickets;
+
+		// When no tickets remain, play the game
+		if ( TicketsRemaining == 0 ) {
+			pickWinner().transfer(Prize);
+            TicketDraw(PreviousWinner, PreviousWinningTicket);
+			resetGame();
+		}
+		
+		// talk about the tickets given
+		TicketSale(msg.sender, RequestedTickets);
+		return RequestedTickets;
+	}
+
+	function () public payable {
+		play();
+	}
+
+	// maintenance
+	function die() public {
+		if (msg.sender == Owner)
+			selfdestruct(Owner);
+	}
+
+}
