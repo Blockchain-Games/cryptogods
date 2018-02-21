@@ -5,51 +5,51 @@ pragma solidity ^0.4.18;
 
 contract rand {
     address private Owner;
-	address public Supervisor;
+    address public Supervisor;
 	
-	uint public LastValue;
-	bool public Owned;
+    uint public LastValue;
+    bool public Owned;
 
-	modifier isSupervisor() {
-		require(msg.sender == Supervisor);
-		_;
-	}
+    modifier isSupervisor() {
+        require(msg.sender == Supervisor);
+        _;
+    }
 
-	function rand() public {
-	    Supervisor = msg.sender;
-		LastValue = uint(Supervisor) & now;
-	}
+    function rand() public {
+        Supervisor = msg.sender;
+        LastValue = uint(Supervisor) & now;
+    }
 
-	function nextValue() public payable returns (uint) {
-		require(msg.value > 0);
+    function nextValue() public payable returns (uint) {
+        require(msg.value > 0);
 		
-		LastValue ^= LastValue << (now % 256);
-		LastValue ^= LastValue >> (msg.value % 128);
-	   	LastValue ^= LastValue << (now % 64);
-	   	LastValue ^= LastValue >> (now % 32);
-	   	LastValue ^= LastValue << (uint(msg.sender) % 16);
-	   	LastValue ^= LastValue >> (now % 8);
-    	LastValue ^= now;
-		return LastValue;
-	}
+        LastValue ^= LastValue << (now % 256);
+        LastValue ^= LastValue >> (msg.value % 128);
+        LastValue ^= LastValue << (now % 64);
+        LastValue ^= LastValue >> (now % 32);
+        LastValue ^= LastValue << (uint(msg.sender) % 16);
+        LastValue ^= LastValue >> (now % 8);
+        LastValue ^= now;
+        return LastValue;
+    }
 	
-	// accept random payments for entropy
-	function() public payable {
-		nextValue();
-	}
+    // accept random payments for entropy
+    function() public payable {
+        nextValue();
+    }
 
-	// maintenance
-	// call for money
-	function withdraw() {
-		if ( Owned && msg.sender == Owner )
-			if ( this.balance > 10 finney ) 	// withdraw at least as much as the amount of gas it costs
-				Owner.transfer(this.balance);
-	}
+    // maintenance
+    // call for money
+    function withdraw() public {
+        if ( Owned && msg.sender == Owner )
+            if ( this.balance > 10 finney ) 	// withdraw at least as much as the amount of gas it costs
+                Owner.transfer(this.balance);
+    }
 	
-	// call from contract to setup the owner
-	function nominateOwner(address NewOwner) isSupervisor public {
-		if ( !Owned ) Owner = NewOwner;
-	}
+    // call from contract to setup the owner
+    function nominateOwner(address NewOwner) isSupervisor public {
+        if ( !Owned ) Owner = NewOwner;
+    }
     
 	// acceptOwnership's sender will likely be a contract, perhaps coins which pay a dividend to us when the fallback is called.
 	// If we do that we should include something like (keep in mind fallbacks can only consume 21000 gas):
@@ -65,13 +65,13 @@ contract rand {
 	//		}
 	//	}
     function acceptOwnership() public {
-		if ( msg.sender == Owner ) 
-			if ( !Owned && Owner != 0x0 ) {
+        if ( msg.sender == Owner ) 
+            if ( !Owned && Owner != 0x0 ) {
                 Owned = true;
-		}
-	}
-	
-	function die() public isSupervisor {
-		if ( Owned ) selfdestruct(Owner);
-	}
+        }
+    }
+    
+    function die() public isSupervisor {
+        if ( Owned ) selfdestruct(Owner);
+    }
 }
