@@ -5,11 +5,15 @@ pragma solidity ^0.4.18;
 
 contract rand {
     address private Owner;
-    address private NewOwner;
 	address public Supervisor;
 	
 	uint public LastValue;
 	bool public Owned;
+
+	modifier isSupervisor() {
+		require(msg.sender == Supervisor);
+		_;
+	}
 
 	function rand() public {
 	    Supervisor = msg.sender;
@@ -17,18 +21,15 @@ contract rand {
 	}
 
 	function nextValue() public payable returns (uint) {
-		if ( msg.value > 0 ) {
-		    if ( this.balance > 150 finney ) 
-		        if ( Owned ) Owner.transfer( this.balance - 50 finney );
-		    LastValue ^= LastValue << (now % 256);
-		    LastValue ^= LastValue >> (msg.value % 128);
-	    	LastValue ^= LastValue << (now % 64);
-	    	LastValue ^= LastValue >> (now % 32);
-	    	LastValue ^= LastValue << (uint(msg.sender) % 16);
-	    	LastValue ^= LastValue >> (now % 8);
-            
-	    	LastValue ^= now;
-		}
+		require(msg.value > 0);
+		
+		LastValue ^= LastValue << (now % 256);
+		LastValue ^= LastValue >> (msg.value % 128);
+	   	LastValue ^= LastValue << (now % 64);
+	   	LastValue ^= LastValue >> (now % 32);
+	   	LastValue ^= LastValue << (uint(msg.sender) % 16);
+	   	LastValue ^= LastValue >> (now % 8);
+    	LastValue ^= now;
 		return LastValue;
 	}
 	
@@ -38,16 +39,20 @@ contract rand {
 	}
 
 	// maintenance
+	// call for money
+	function withdraw() {
+		if ( Owned && msg.sender == Owner )
+			if ( this.balance > 10 finney ) 	// withdraw at least as much as the amount of gas it costs
+				Owner.transfer(this.balance);
+	}
+	
 	// call from contract to setup the owner
-	function nominateOwner(address _NewOwner) public {
-		if ( msg.sender == Supervisor ) 
-			if ( !Owned ) {
-				NewOwner = _NewOwner;
-		}
+	function nominateOwner(address NewOwner) isSupervisor public {
+		if ( !Owned ) Owner = NewOwner;
 	}
     
 	// acceptOwnership's sender will likely be a contract, perhaps coins which pay a dividend to us when the fallback is called.
-	// If we do that we should include something like:
+	// If we do that we should include something like (keep in mind fallbacks can only consume 21000 gas):
 	// 	contract c {
 	// 		function acceptOwnership();	// prototype contract and function
 	//	}
@@ -60,17 +65,13 @@ contract rand {
 	//		}
 	//	}
     function acceptOwnership() public {
-		if ( msg.sender == NewOwner ) 
-			if ( !Owned ) {
-				Owner = NewOwner;
-                NewOwner = 0x0;
+		if ( msg.sender == Owner ) 
+			if ( !Owned && Owner != 0x0 ) {
                 Owned = true;
 		}
 	}
 	
-	function die() public {
-		if ( msg.sender == Supervisor ) {
-			if ( Owned ) selfdestruct(Owner);
-		}
+	function die() public isSupervisor {
+		if ( Owned ) selfdestruct(Owner);
 	}
 }
