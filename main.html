@@ -10,25 +10,24 @@ More information: see our git
     <title>Raffle Time! - Get lucky today</title>
     <script>
       var network = "unknown";
-      var gameContract = "";
       var raffle;
       var ticketsRemaining;
-      
+
       function checkWeb3() {
         if (typeof web3 !== 'undefined') {
-          console.log('Found MetaMask!');
+          console.log('Found MetaMask!')
           web3 = new Web3(web3.currentProvider);
         } else {
           console.log('No web3? You should consider trying MetaMask!')
           // fallback
           web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
         }
-        setup_contract();
-        find_network();
+        findNetwork();
+        attach_contract();
         run_js();
       }
-      
-      function setup_contract() {
+
+      function attach_contract() {
         var abi = [ { 
           "constant": false, "inputs": [], "name": "die", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" 
         }, { 
@@ -81,31 +80,61 @@ More information: see our git
           "name": "TicketDraw", "type": "event" 
         } ];
         var game = web3.eth.contract(abi);
+        raffle = game.at('0xd8cd553c81c4b5143b37ead453514fc89c07396d');
       }
-      
-      function find_network() {
+
+      function run_js() {
         function callback(error, result) {
+          if (!error) {
+            ticketsRemaining = result;
+            document.getElementById('TicketsRemaining').innerHTML = 'Tickets Remaining: ' + ticketsRemaining;
+        } else {
+          document.getElementById('TicketsRemaining').innerHTML = 'Unknown';
+            console.log('tickets cant be found');
+          }
+        }
+
+        raffle.TicketsRemaining.call(callback);
+      }
+
+      function buyTicket() {
+        var transactionObject = {value: web3.toWei(0.025), gas: 40000};
+
+        function callback(error, result) {
+          if (!error) {
+            console.log('tickets bought: ' + result);
+          } else {
+            console.log('tickets cant be purchased for some reason');
+          }
+        }
+
+        raffle.play.sendTransaction(transactionObject, callback);
+      }
+
+      function findNetwork() {
+        console.log('finding Network:');
+        web3.version.getNetwork((error, result) => {
           var output = "";
+
           if (!error) {
             if(result > 1000000000000) {
               output = "testrpc";
             } else {
               switch (result) {
-                case "1":
-                  output = "mainnet";
-                  break
-                case "2":
-                  output = "morden";
-                  break
-                case "3":
-                  output = "ropsten";
-                  break
-                case "4":
-                  output = "rinkeby";
-                  raffle = game.at('0xd8cd553c81c4b5143b37ead453514fc89c07396d');
-                  break
-                default:
-                  output = "unknown network = " + result;
+                  case "1":
+                    output = "mainnet";
+                    break
+                  case "2":
+                    output = "morden";
+                    break
+                  case "3":
+                    output = "ropsten";
+                    break
+                  case "4":
+                    output = "rinkeby";
+                    break
+                  default:
+                    output = "unknown network = " + result;
               }
             }
           } else {
@@ -114,45 +143,10 @@ More information: see our git
           network = output;
           console.log('found ' + network);
           document.getElementById('networkID').innerHTML = network;
-        }
-        
-        console.log('finding Network:');
-        web3.version.getNetwork(callback);
-      }
-      
-      // example non modifying function call
-      function run_js() {
-        function callback(error, result) {
-          if (!error) {
-            ticketsRemaining = result;
-            document.getElementById('TicketsRemaining').innerHTML = 'Tickets Remaining: ' + ticketsRemaining;
-          } else {
-            document.getElementById('TicketsRemaining').innerHTML = 'Unknown';
-            console.log('tickets cant be found');
-          }
-        }
-        
-        raffle.TicketsRemaining.call(callback);
-      }
-      
-      // example function call sending eth
-      function buy25Tickets() {
-        var transactionObject = {
-          value: web3.toWei(0.025), 
-          gas: 40000
-        };
-        
-        function callback(error, result) {
-          if (!error) {
-            console.log('tickets bought: ' + result);
-          } else {
-            console.log('tickets cant be purchased for some reason');
-          }
-        }
-        
-        raffle.play.sendTransaction(transactionObject, callback);
+        })
       }
     </script>
+
   </head>
   <body>
     <script>
@@ -160,14 +154,13 @@ More information: see our git
     </script>
     <h1>test data:</h1>
       <div id="networkID"></div>
-
+    <hr>
     <h1>Ether Raffle</h1>
     <h2>How to play:</h2>
       <p>1. Tickets cost 1 Finney (0.001 ETH) each</p>
       <p>2. Draw occurs automatically when 1000 tickets have been sold</p>
       <p>3. Winner gets 888 Finney [hint: don't buy more than 887 tickets ;-D]</p>
       <p><div id="TicketsRemaining">data not found</div></p>
-      <input type="button" value="buy 25 tickets" onclick="buy25Tickets();" />
+      <input type="button" value="buy" onclick="buyTicket();" />
   </body>
 </html>
-
