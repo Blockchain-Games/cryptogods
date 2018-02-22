@@ -16,6 +16,8 @@ More information: see our git
       var network = "unknown";
       var raffle;
       var ticketsRemaining;
+      var prevWinner;
+      var prevTicket;
 
       // startup function
       function startup() {
@@ -51,6 +53,16 @@ More information: see our git
 	else buystr = buystr + makeButtStr(ticketsRemaining);
 
         //console.log(buystr);
+        function callback(error, result) {
+          if (!error) {
+            ticketsRemaining = result;
+            document.getElementById('TicketsRemaining').innerHTML = 'Tickets Remaining: ' + ticketsRemaining;
+        } else {
+          document.getElementById('TicketsRemaining').innerHTML = 'Unknown';
+            console.log('tickets cant be found');
+          }
+        }
+
 	document.getElementById('BuyButtons').innerHTML = buystr;
 
         // loop every 2.5 seconds
@@ -196,9 +208,11 @@ More information: see our git
       2. Draw occurs automatically when 1000 tickets have been sold<br>
       3. Winner gets 888 Finney [hint: don't buy more than 887 tickets ;-D]<br>
       <br>
-      <div id="TicketsRemaining">data not found</div>
-      <div id="BuyButtons"></div>
-      <div id="networkID"></div>
+      <div id="LastWinner">last winner not found</div>
+      <br>
+      <div id="TicketsRemaining">tickets not found</div>
+      <div id="BuyButtons">Buttons are broken</div>
+      <div id="networkID">No network found</div>
   </body>
   <script>
     // perform once page is loaded
