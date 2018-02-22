@@ -12,7 +12,7 @@ contract raffle {
     
     address private Owner;
     uint constant Prize = 888 finney;
-    uint constant MaximumTickets = 1000 finney;
+    uint constant MaximumTickets = 1000;
 
     struct _TicketHolder {
         address Player;
