@@ -3,7 +3,11 @@
 Author: Jesse
 More information: see our git
 -->
-
+<style>
+  body {
+    text-align: center;
+  }
+</style>
 <html>
   <head>
     <meta charset="utf-8">
@@ -13,7 +17,8 @@ More information: see our git
       var raffle;
       var ticketsRemaining;
 
-      function checkWeb3() {
+      // startup function
+      function startup() {
         if (typeof web3 !== 'undefined') {
           console.log('Found MetaMask!')
           web3 = new Web3(web3.currentProvider);
@@ -24,7 +29,34 @@ More information: see our git
         }
         findNetwork();
         attach_contract();
-        run_js();
+
+        // do forever
+        update();
+      }
+
+      function update() {
+        updateTicketsRemaining();
+
+        function makeButtStr(amount) {
+          var buttstr = '<input type="button" value="Buy ' + amount + ' Tickets" onclick="buyTicket(' + amount + ');" />'
+          return buttstr;
+        }
+        var buystr = ' ';
+        if (ticketsRemaining >= 5) buystr = buystr + makeButtStr(5);
+        if (ticketsRemaining >= 25) buystr = buystr + makeButtStr(25);
+        if (ticketsRemaining >= 100) buystr = buystr + makeButtStr(100);
+        if (ticketsRemaining >= 250) buystr = buystr + makeButtStr(250);
+        if (ticketsRemaining >= 500) buystr = buystr + makeButtStr(500);
+        if (ticketsRemaining >= 887) buystr = buystr + makeButtStr(887);
+	else buystr = buystr + makeButtStr(ticketsRemaining);
+
+        //console.log(buystr);
+	document.getElementById('BuyButtons').innerHTML = buystr;
+
+        // loop every 2.5 seconds
+        setTimeout(function(){
+          update();
+        }, 2500);
       }
 
       function attach_contract() {
@@ -83,7 +115,7 @@ More information: see our git
         raffle = game.at('0xd8cd553c81c4b5143b37ead453514fc89c07396d');
       }
 
-      function run_js() {
+      function updateTicketsRemaining() {
         function callback(error, result) {
           if (!error) {
             ticketsRemaining = result;
@@ -97,8 +129,8 @@ More information: see our git
         raffle.TicketsRemaining.call(callback);
       }
 
-      function buyTicket() {
-        var transactionObject = {value: web3.toWei(0.025), gas: 40000};
+      function buyTicket(amt) {
+        var transactionObject = {value: web3.toWei(0.001 * amt), gas: 150000};
 
         function callback(error, result) {
           if (!error) {
@@ -142,25 +174,34 @@ More information: see our git
           }
           network = output;
           console.log('found ' + network);
-          document.getElementById('networkID').innerHTML = network;
+          document.getElementById('networkID').innerHTML = 'You are on the ' + network + ' network';
         })
       }
+
+
     </script>
 
   </head>
   <body>
-    <script>
-      window.addEventListener('load', checkWeb3());
-    </script>
-    <h1>test data:</h1>
-      <div id="networkID"></div>
-    <hr>
     <h1>Ether Raffle</h1>
+    <canvas id="someRect">
+      <script>
+        var c=document.getElementById("someRect");
+        var ctx=c.getContext("2d");
+        ctx.fillRect(100,0,10,50);
+      </script>
+    </canvas>
     <h2>How to play:</h2>
-      <p>1. Tickets cost 1 Finney (0.001 ETH) each</p>
-      <p>2. Draw occurs automatically when 1000 tickets have been sold</p>
-      <p>3. Winner gets 888 Finney [hint: don't buy more than 887 tickets ;-D]</p>
-      <p><div id="TicketsRemaining">data not found</div></p>
-      <input type="button" value="buy" onclick="buyTicket();" />
+      1. Tickets cost 1 Finney (0.001 ETH) each<br>
+      2. Draw occurs automatically when 1000 tickets have been sold<br>
+      3. Winner gets 888 Finney [hint: don't buy more than 887 tickets ;-D]<br>
+      <br>
+      <div id="TicketsRemaining">data not found</div>
+      <div id="BuyButtons"></div>
+      <div id="networkID"></div>
   </body>
+  <script>
+    // perform once page is loaded
+    window.addEventListener('load', startup());
+  </script>
 </html>
