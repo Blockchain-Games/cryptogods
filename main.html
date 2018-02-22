@@ -6,6 +6,8 @@ More information: see our git
 <style>
   body {
     text-align: center;
+    background: darkblue;
+    color:	white;
   }
 </style>
 <html>
@@ -38,6 +40,9 @@ More information: see our git
 
       function update() {
         updateTicketsRemaining();
+        updateLastWinner();
+        updateLastWinningTicket();
+
 
         function makeButtStr(amount) {
           var buttstr = '<input type="button" value="Buy ' + amount + ' Tickets" onclick="buyTicket(' + amount + ');" />'
@@ -52,18 +57,11 @@ More information: see our git
         if (ticketsRemaining >= 887) buystr = buystr + makeButtStr(887);
 	else buystr = buystr + makeButtStr(ticketsRemaining);
 
-        //console.log(buystr);
-        function callback(error, result) {
-          if (!error) {
-            ticketsRemaining = result;
-            document.getElementById('TicketsRemaining').innerHTML = 'Tickets Remaining: ' + ticketsRemaining;
-        } else {
-          document.getElementById('TicketsRemaining').innerHTML = 'Unknown';
-            console.log('tickets cant be found');
-          }
-        }
-
 	document.getElementById('BuyButtons').innerHTML = buystr;
+
+	var laststr = 'Congratulations to ' + prevWinner + ' with ticket number ' + prevTicket;
+	document.getElementById('LastWinner').innerHTML = laststr;
+
 
         // loop every 2.5 seconds
         setTimeout(function(){
@@ -124,7 +122,33 @@ More information: see our git
           "name": "TicketDraw", "type": "event" 
         } ];
         var game = web3.eth.contract(abi);
-        raffle = game.at('0xd8cd553c81c4b5143b37ead453514fc89c07396d');
+        raffle = game.at('0x41bBFB06BA9d66F1098fDbaAdb257EBDDfde0bb7');
+      }
+
+      function updateLastWinner() {
+        function callback(error, result) {
+          if (!error) {
+            prevWinner = result;
+        } else {
+          document.getElementById('TicketsRemaining').innerHTML = 'Unknown';
+            console.log('winner cant be found');
+          }
+        }
+
+        raffle.PreviousWinner.call(callback);
+      }
+
+      function updateLastWinningTicket() {
+        function callback(error, result) {
+          if (!error) {
+            prevTicket = result;
+        } else {
+          document.getElementById('TicketsRemaining').innerHTML = 'Unknown';
+            console.log('winner cant be found');
+          }
+        }
+
+        raffle.PreviousWinningTicket.call(callback);
       }
 
       function updateTicketsRemaining() {
@@ -196,13 +220,7 @@ More information: see our git
   </head>
   <body>
     <h1>Ether Raffle</h1>
-    <canvas id="someRect">
-      <script>
-        var c=document.getElementById("someRect");
-        var ctx=c.getContext("2d");
-        ctx.fillRect(100,0,10,50);
-      </script>
-    </canvas>
+    <hr>
     <h2>How to play:</h2>
       1. Tickets cost 1 Finney (0.001 ETH) each<br>
       2. Draw occurs automatically when 1000 tickets have been sold<br>
