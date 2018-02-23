@@ -16,6 +16,7 @@ More information: see our git
     <title>Raffle Time! - Get lucky today</title>
     <script>
       var network = "unknown";
+      var game;
       var raffle;
       var ticketsRemaining;
       var prevWinner;
@@ -31,8 +32,8 @@ More information: see our git
           // fallback
           web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
         }
+        make_contract();
         findNetwork();
-        attach_contract();
 
         // do forever
         update();
@@ -48,14 +49,21 @@ More information: see our git
           var buttstr = '<input type="button" value="Buy ' + amount + ' Tickets" onclick="buyTicket(' + amount + ');" />'
           return buttstr;
         }
-        var buystr = ' ';
-        if (ticketsRemaining >= 5) buystr = buystr + makeButtStr(5);
-        if (ticketsRemaining >= 25) buystr = buystr + makeButtStr(25);
-        if (ticketsRemaining >= 100) buystr = buystr + makeButtStr(100);
-        if (ticketsRemaining >= 250) buystr = buystr + makeButtStr(250);
-        if (ticketsRemaining >= 500) buystr = buystr + makeButtStr(500);
-        if (ticketsRemaining >= 887) buystr = buystr + makeButtStr(887);
-	else buystr = buystr + makeButtStr(ticketsRemaining);
+
+        function addButtStr(tr, amount) {
+          var buttstr = '';
+          if (tr > amount) buttstr = makeButtStr(amount);
+          return buttstr;
+        }
+
+        var buystr = addButtStr(ticketsRemaining, 5)
+                   + addButtStr(ticketsRemaining, 25)
+                   + addButtStr(ticketsRemaining, 100)
+                   + addButtStr(ticketsRemaining, 250)
+                   + addButtStr(ticketsRemaining, 500)
+                   + ( ticketsRemaining > 887 ?
+                     addButtStr(ticketsRemaining, 887)
+                   : addButtStr(ticketsRemaining, ticketsRemaining) );
 
 	document.getElementById('BuyButtons').innerHTML = buystr;
 
@@ -69,7 +77,7 @@ More information: see our git
         }, 2500);
       }
 
-      function attach_contract() {
+      function make_contract() {
         var abi = [ { 
           "constant": false, "inputs": [], "name": "die", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" 
         }, { 
@@ -121,7 +129,7 @@ More information: see our git
                       { "indexed": false, "name": "TicketNumber", "type": "uint256" } ], 
           "name": "TicketDraw", "type": "event" 
         } ];
-        var game = web3.eth.contract(abi);
+        game = web3.eth.contract(abi);
         raffle = game.at('0x41bBFB06BA9d66F1098fDbaAdb257EBDDfde0bb7');
       }
 
@@ -180,8 +188,9 @@ More information: see our git
       }
 
       function findNetwork() {
+
         console.log('finding Network:');
-        web3.version.getNetwork((error, result) => {
+        web3.version.getNetwork(function (error, result) {
           var output = "";
 
           if (!error) {
@@ -191,15 +200,19 @@ More information: see our git
               switch (result) {
                   case "1":
                     output = "mainnet";
+                    //raffle = game.at('0x6666');
                     break
                   case "2":
                     output = "morden";
+                    //raffle = game.at('0x6666');
                     break
                   case "3":
                     output = "ropsten";
+                    //raffle = game.at('0x6666');
                     break
                   case "4":
                     output = "rinkeby";
+                    raffle = game.at('0x41bBFB06BA9d66F1098fDbaAdb257EBDDfde0bb7');
                     break
                   default:
                     output = "unknown network = " + result;
@@ -231,6 +244,7 @@ More information: see our git
       <div id="TicketsRemaining">tickets not found</div>
       <div id="BuyButtons">Buttons are broken</div>
       <div id="networkID">No network found</div>
+      <p> Thank you for playing our game, please know the commission we take from each game is used to pay for web hosting, site development, transaction gas, contract development, paying artist and designer costs for this and future games we're planning to make. In time we will reduce or eliminate this commission but until then you can feel good that you're making a difference in the lives of some new comers to the development scene :-)</p>
   </body>
   <script>
     // perform once page is loaded
