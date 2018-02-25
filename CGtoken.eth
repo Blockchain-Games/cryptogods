@@ -1,0 +1,114 @@
+contract ERC721 {
+    // Required methods
+    function approve(address _to, uint256 _tokenId) public;                                                 //
+    function balanceOf(address _owner) public view returns (uint256 balance);                               //
+    function implementsERC721() public pure returns (bool);                                                 //
+    function ownerOf(uint256 _tokenId) public view returns (address addr);                                  //
+    function takeOwnership(uint256 _tokenId) public;                                                        //
+    function totalSupply() public view returns (uint256 total);                                             //
+    function transferFrom(address _from, address _to, uint256 _tokenId) public;                             
+    function transfer(address _to, uint256 _tokenId) public;
+
+    event Transfer(address indexed from, address indexed to, uint256 tokenId);
+    event Approval(address indexed owner, address indexed approved, uint256 tokenId);
+
+    // Optional
+    function name() public view returns (string name);                                                      //
+    function symbol() public view returns (string symbol);                                                  //
+    function tokenOfOwnerByIndex(address _owner, uint256 _index) external view returns (uint256 tokenId);
+    function tokenMetadata(uint256 _tokenId) public view returns (string infoUrl);                          //
+}
+
+contract Owned {
+    address JF private;
+    address KS private;
+    
+    modifier onlyJF() {
+        if (address.sender != JF) return;
+        _;
+    }
+    
+    modifier onlyKS() {
+        if (address.sender != KS) return;
+        _;
+    }
+    
+    modifier onlyJForKS() {
+        if (address.sender != JF && address.sender != KS) return;
+        _;
+    }
+    
+    setOwners(address jf, address ks) {
+        if (JF || KS) return;
+        JF = jf;
+        KS = ks;
+    }
+}
+
+contract cryptogods is ERC721, Owned {
+    struct god {
+        address Owner;
+        string metaURL;
+        mapping (address => bool) transferApproved;
+    }
+    
+    mapping (uint => god) godInfo;
+    mapping (address => uint) godBalance;
+    uint256 totalSupply public;
+    
+    // CG methods
+    function makeNewGod(string attrAddr, address keeper) public onlyJForKS {
+        uint newGodID = totalSupply++;
+        godInfo[newGodID].Owner = keeper;
+        godInfo[newGodID].metaURL = attrAddr;
+    }
+    
+    function battleGod(...) {
+        ???;
+    }
+    
+    // ERC721 methods
+    function approve(address _to, uint256 _tokenId) public {
+        address tokenOwner = this.sender;
+        if (tokenOwner == godInfo[_tokenId].Owner ) {               // check for token owner
+            godInfo[_tokenId].transferApproved[_to] = true;         // approve transfer to new owner
+        }
+    }
+    
+    function balanceOf(address _owner) public view returns (uint256 balance) {
+        balance = godBalance[_owner];
+    }
+    
+    function ownerOf(uint256 _tokenId) public view returns (address addr) {
+        addr = godInfo[_tokenId].Owner;
+    }
+
+    function implementsERC721() public pure returns (bool) {
+        return true;
+    }
+    
+    function takeOwnership(uint256 _tokenId) public {
+        address oldOwner = godInfo[_tokenId].Owner;
+        address newOwner = this.sender;
+        if ( godInfo[_tokenId].transferApproved[newOwner] == true ) {
+            
+            godInfo[_tokenId].transferApproved[newOwner] = false;   // remove approval on transfer of ownership
+            godInfo[_tokenId].Owner = newOwner;                     // set the new token owner
+            
+            godBalance[oldOwner]--;
+            godBalance[newOwner]++;                                 // adjust balances
+        }
+    }
+
+    function name() public view returns (string name) {
+        name = "Cryptogods";
+    }
+    
+    function symbol() public view returns (string symbol) {
+        symbol = "Gods";
+    }
+    
+    function tokenMetadata(uint256 _tokenId) public view returns (string infoUrl) {
+        infoUrl = godInfo[_tokenId].metaURL;
+    }
+}

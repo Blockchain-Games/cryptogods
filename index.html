@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<!--
+Author: Jesse
+More information: see our git
+-->
+<style>
+  body {
+    text-align: center;
+    background: darkblue;
+    color:	white;
+  }
+</style>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Raffle Time! - Get lucky today</title>
+    <script>
+      var network = "unknown";
+      var game;
+      var raffle;
+      var ticketsRemaining;
+      var prevWinner;
+      var prevTicket;
+
+      // startup function
+      function startup() {
+        if (typeof web3 !== 'undefined') {
+          console.log('Found MetaMask!')
+          web3 = new Web3(web3.currentProvider);
+        } else {
+          console.log('No web3? You should consider trying MetaMask!')
+          // fallback
+          web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+        }
+        make_contract();
+        findNetwork();
+
+        // do forever
+        update();
+      }
+
+      function update() {
+        updateTicketsRemaining();
+        updateLastWinner();
+        updateLastWinningTicket();
+
+
+        function makeButtStr(amount) {
+          var buttstr = '<input type="button" value="Buy ' + amount + ' Tickets" onclick="buyTicket(' + amount + ');" />'
+          return buttstr;
+        }
+
+        function addButtStr(tr, amount) {
+          var buttstr = '';
+          if (tr > amount) buttstr = makeButtStr(amount);
+          return buttstr;
+        }
+
+        var buystr = addButtStr(ticketsRemaining, 5)
+                   + addButtStr(ticketsRemaining, 25)
+                   + addButtStr(ticketsRemaining, 100)
+                   + addButtStr(ticketsRemaining, 250)
+                   + addButtStr(ticketsRemaining, 500)
+                   + ( ticketsRemaining > 887 ?
+                     addButtStr(ticketsRemaining, 887)
+                   : addButtStr(ticketsRemaining, ticketsRemaining) );
+
+	document.getElementById('BuyButtons').innerHTML = buystr;
+
+	var laststr = 'Congratulations to ' + prevWinner + ' with ticket number ' + prevTicket;
+	document.getElementById('LastWinner').innerHTML = laststr;
+
+
+        // loop every 2.5 seconds
+        setTimeout(function(){
+          update();
+        }, 2500);
+      }
+
+      function make_contract() {
+        var abi = [ { 
+          "constant": false, "inputs": [], "name": "die", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" 
+        }, { 
+          "name": "NumberOfPlayers", 
+          "type": "function",
+          "constant": true, 
+          "inputs": [], 
+          "outputs": [ { "name": "", "type": "uint256" } ], 
+          "payable": false, 
+          "stateMutability": "view"
+        }, {
+          "name": "play", 
+          "type": "function",
+          "constant": false,
+          "inputs": [], 
+          "outputs": [ { "name": "", "type": "uint256" } ], 
+          "payable": true, 
+          "stateMutability": "payable"
+        }, { 
+          "name": "PreviousWinningTicket", 
+          "type": "function", 
+          "constant": true, 
+          "inputs": [], 
+          "outputs": [ { "name": "", "type": "uint256" } ], 
+          "payable": false, 
+          "stateMutability": "view" 
+        }, { 
+          "constant": true, "inputs": [], "name": "PreviousWinner", "outputs": [ { "name": "", "type": "address" } ], "payable": false, "stateMutability": "view", "type": "function" 
+        }, {
+          "constant": true,
+          "inputs": [],
+          "name": "TicketsRemaining",
+          "outputs": [ { "name": "", "type": "uint256" } ],
+          "payable": false,
+          "stateMutability": "view",
+          "type": "function" 
+        }, { 
+          "inputs": [], "payable": false, "stateMutability": "nonpayable", "type": "constructor" 
+        }, { 
+          "payable": true, "stateMutability": "payable", "type": "fallback" 
+        }, { 
+          "anonymous": false, 
+          "inputs": [ { "indexed": false, "name": "User", "type": "address" }, 
+                      { "indexed": false, "name": "NumberOfTicketsBought", "type": "uint256" } ], 
+          "name": "TicketSale", "type": "event" 
+        }, { 
+          "anonymous": false, 
+          "inputs": [ { "indexed": false, "name": "Winner", "type": "address" }, 
+                      { "indexed": false, "name": "TicketNumber", "type": "uint256" } ], 
+          "name": "TicketDraw", "type": "event" 
+        } ];
+        game = web3.eth.contract(abi);
+        raffle = game.at('0x41bBFB06BA9d66F1098fDbaAdb257EBDDfde0bb7');
+      }
+
+      function updateLastWinner() {
+        function callback(error, result) {
+          if (!error) {
+            prevWinner = result;
+        } else {
+          document.getElementById('TicketsRemaining').innerHTML = 'Unknown';
+            console.log('winner cant be found');
+          }
+        }
+
+        raffle.PreviousWinner.call(callback);
+      }
+
+      function updateLastWinningTicket() {
+        function callback(error, result) {
+          if (!error) {
+            prevTicket = result;
+        } else {
+          document.getElementById('TicketsRemaining').innerHTML = 'Unknown';
+            console.log('winner cant be found');
+          }
+        }
+
+        raffle.PreviousWinningTicket.call(callback);
+      }
+
+      function updateTicketsRemaining() {
+        function callback(error, result) {
+          if (!error) {
+            ticketsRemaining = result;
+            document.getElementById('TicketsRemaining').innerHTML = 'Tickets Remaining: ' + ticketsRemaining;
+        } else {
+          document.getElementById('TicketsRemaining').innerHTML = 'Unknown';
+            console.log('tickets cant be found');
+          }
+        }
+
+        raffle.TicketsRemaining.call(callback);
+      }
+
+      function buyTicket(amt) {
+        var transactionObject = {value: web3.toWei(0.001 * amt), gas: 150000};
+
+        function callback(error, result) {
+          if (!error) {
+            console.log('tickets bought: ' + result);
+          } else {
+            console.log('tickets cant be purchased for some reason');
+          }
+        }
+
+        raffle.play.sendTransaction(transactionObject, callback);
+      }
+
+      function findNetwork() {
+
+        console.log('finding Network:');
+        web3.version.getNetwork(function (error, result) {
+          var output = "";
+
+          if (!error) {
+            if(result > 1000000000000) {
+              output = "testrpc";
+            } else {
+              switch (result) {
+                  case "1":
+                    output = "mainnet";
+                    //raffle = game.at('0x6666');
+                    break
+                  case "2":
+                    output = "morden";
+                    //raffle = game.at('0x6666');
+                    break
+                  case "3":
+                    output = "ropsten";
+                    //raffle = game.at('0x6666');
+                    break
+                  case "4":
+                    output = "rinkeby";
+                    raffle = game.at('0x41bBFB06BA9d66F1098fDbaAdb257EBDDfde0bb7');
+                    break
+                  default:
+                    output = "unknown network = " + result;
+              }
+            }
+          } else {
+            output = "Error";
+          }
+          network = output;
+          console.log('found ' + network);
+          document.getElementById('networkID').innerHTML = 'You are on the ' + network + ' network';
+        })
+      }
+
+
+    </script>
+
+  </head>
+  <body>
+    <h1>Ether Raffle</h1>
+    <hr>
+    <h2>How to play:</h2>
+      1. Tickets cost 1 Finney (0.001 ETH) each<br>
+      2. Draw occurs automatically when 1000 tickets have been sold<br>
+      3. Winner gets 888 Finney [hint: don't buy more than 887 tickets ;-D]<br>
+      <br>
+      <div id="LastWinner">last winner not found</div>
+      <br>
+      <div id="TicketsRemaining">tickets not found</div>
+      <div id="BuyButtons">Buttons are broken</div>
+      <div id="networkID">No network found</div>
+      <p> Thank you for playing our game, please know the commission we take from each game is used to pay for web hosting, site development, transaction gas, contract development, paying artist and designer costs for this and future games we're planning to make. In time we will reduce or eliminate this commission but until then you can feel good that you're making a difference in the lives of some new comers to the development scene :-)</p>
+  </body>
+  <script>
+    // perform once page is loaded
+    window.addEventListener('load', startup());
+  </script>
+</html>
