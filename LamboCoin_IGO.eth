@@ -1,0 +1,149 @@
+pragma solidity ^0.4.8;
+
+// LamboCoin - The Ferrari of coins
+//      - Ultra limited edition, only 250 coins released publicly!
+//      - the ORIGINAL collector coin
+//      - 6 coins are retained for the developers (< 2.5% of all Lambos)
+//      - 256 total Lambos spawned
+//      - Lambos are distributed amongst the accounts at the end of the ICO
+//      who have sent the most Ether
+//      - Make sure your balance is above the CurrentPrice at the end of the
+//      ICO to get your Lambo(s). Don't miss out!!
+//      - send Ether straight to the contract address, it's that easy!
+//      - LamboCoin is an unowned ERC20 compliant contract, it will never 
+//      selfdestruct and you can trade it as you wish!
+
+// To Do:
+//  - add events
+//  - add token contract creation [endICO()]
+//  - incorporate SafeMath
+
+/**
+ * Math operations with safety checks - test first, use later
+ */
+contract SafeMath {
+  function safeMul(uint256 a, uint256 b) pure private returns (uint256) {
+    uint256 c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
+  }
+
+  function safeDiv(uint256 a, uint256 b) pure private returns (uint256) {
+    assert(b > 0);
+    uint256 c = a / b;
+    assert(a == b * c + a % b);
+    return c;
+  }
+
+  function safeSub(uint256 a, uint256 b) pure private returns (uint256) {
+    assert(b <= a);
+    return a - b;
+  }
+
+  function safeAdd(uint256 a, uint256 b) pure private returns (uint256) {
+    uint256 c = a + b;
+    assert(c>=a && c>=b);
+    return c;
+  }
+}
+
+contract LamboICO is SafeMath {
+    // internal structures
+    struct investorData {
+        uint position;
+        uint paid;
+    }
+    
+    uint constant maximumLambos = 250;
+    uint public investors;
+    mapping(uint => address) private investorList;
+    mapping(address => investorData) private investor;
+    
+    // visible methods
+    function userStatistics(address you) view public returns (uint amount, uint lambos) {
+        require(currentPrice() > 0);
+        amount = investor[you].paid;
+        lambos = investor[you].paid / currentPrice();
+    }
+    
+    function currentLamboPrice() view public returns (uint Ethers, uint Finneys) {
+        uint price = currentPrice();
+        Ethers = price / (1 ether);
+        price %= (1 ether);
+        Finneys = price / (1 finney);
+        return;
+    }
+
+    // buy in
+    function () public payable {
+        require(msg.value > 0);
+        // find investor number
+        uint investorNumber = investor[msg.sender].position;
+        // if it's a new investor..
+        if (investorNumber == 0) {
+            // increment investors
+            investorNumber = ++investors;
+            // record investor details
+            investorList[investorNumber] = msg.sender;
+            investor[msg.sender].position = investorNumber;
+        }
+        // add the amount sent to the investors running total
+        investor[msg.sender].paid += msg.value;
+    }
+
+    // internal helpers
+    function currentPrice() view private returns (uint lamboPrice) {
+        require(investors > 0); // only work if people have started adding eth
+        address InvestAddr = investorList[1];
+        uint lowestPrice;
+        lamboPrice = investor[InvestAddr].paid;
+        // repeat until the price is found
+        while(true) {
+            uint distributedLambos;
+            // find the lowest offer and set to the current lambo price
+            uint i;
+            for (i = 1; i <= investors; i++) {
+                InvestAddr = investorList[i];
+                if (investor[InvestAddr].paid < lamboPrice && investor[InvestAddr].paid > lowestPrice) {
+                    lamboPrice = investor[InvestAddr].paid;
+                }
+            }
+            
+            // see how many lambos get distributed
+            for (i = 1; i <= investors; i++) {
+                InvestAddr = investorList[i];
+                if (investor[InvestAddr].paid < lamboPrice) {
+                    distributedLambos += investor[InvestAddr].paid / lamboPrice;
+                }
+            }
+            
+            // if theres too many, try again with the next lowest price
+            if (distributedLambos > maximumLambos) {
+                lowestPrice = lamboPrice;
+            } else {            // otherwise thats the current price
+                return lamboPrice;
+            }
+        }
+    }
+    
+    
+    // maintenance
+    address public owner;
+    
+    function LamboICO() public {
+        owner = msg.sender;
+    }
+    
+    function endICO() public {
+        require(msg.sender == owner); // only die when I want it to
+
+        // create new ERC20 contract
+        // endow Lambos to winners
+            // for each investor
+                // give them (investor.paid / lamboprice) lambos
+                // refund what we have to
+        // kill this contract, LamboCoin contract becomes ownerless
+
+        selfdestruct(owner);
+    }
+}
