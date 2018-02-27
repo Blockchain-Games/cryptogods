@@ -13,23 +13,21 @@ pragma solidity ^0.4.8;
 //      - LamboCoin is an unowned ERC20 compliant contract, it will never 
 //      selfdestruct and you can trade it as you wish!
 
-// To Do:
-//  - add events
-//  - add token contract creation [endICO()]
-//  - incorporate SafeMath
-
 /**
- * Math operations with safety checks - test first, use later
+ * Math operations with safety checks
  */
 library SafeMath {
   function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+    if( a == 0 || b == 0) return 0;
     uint256 c = a * b;
-    assert(a == 0 || c / a == b);
+    assert(c / a == b);
     return c;
   }
 
   function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    assert(b > 0);
     uint256 c = a / b;
+    assert(a == (b * c) + (a % b));
     return c;
   }
 
@@ -61,18 +59,19 @@ contract LamboICO {
     LamboCoin private LamboContract;
     address public LamboContractAddress;
     
+    event newInvestor(address who, uint userNumber);
+    event valueAdded(address who, uint howMuch);
+    
     // visible methods
     function userStatistics(address you) view public returns (uint amount, uint lambos) {
         require(currentPrice() > 0);
+        require(you != 0x0);
         amount = investor[you].paid;
         lambos = investor[you].paid.div(currentPrice());
     }
     
-    function currentLamboPrice() view public returns (uint Ethers, uint Finneys) {
-        uint price = currentPrice();
-        Ethers = price / (1 ether);
-        price %= (1 ether);
-        Finneys = price / (1 finney);
+    function currentLamboPrice() view public returns (uint Gwei) {
+        Gwei = currentPrice();
         return;
     }
 
@@ -85,12 +84,15 @@ contract LamboICO {
         if (investorNumber == 0) {
             // increment investors
             investorNumber = ++investors;
+            require(investors > 0);
             // record investor details
             investorList[investorNumber] = msg.sender;
             investor[msg.sender].position = investorNumber;
+            newInvestor(msg.sender, investorNumber);
         }
         // add the amount sent to the investors running total
         investor[msg.sender].paid = investor[msg.sender].paid.add(msg.value);
+        valueAdded(msg.sender, msg.value);
     }
 
     // internal helpers
@@ -196,7 +198,7 @@ contract LamboCoin is ERC20_Base {
     mapping (address => mapping (address => uint256)) allowed;
 
     string public constant name = "LamboCoin";
-    string public constant symbol = "Lambo";
+    string public constant symbol = "Lamborghini";
     uint public constant decimals = 0;
     
     uint public totalSupply;
@@ -230,6 +232,7 @@ contract LamboCoin is ERC20_Base {
     address owner;
         
     function LamboCoin (uint _totalSupply) public {
+        assert(_totalSupply > 0);
         owner = msg.sender;
         totalSupply = _totalSupply;
     }
@@ -262,6 +265,8 @@ contract LamboCoin is ERC20_Base {
     
     ////////////////////////// ICO Functionality //////////////////////////
     function distribute(address _to, uint256 _amount) onlyOwner liveICO public returns (bool) {
+        assert(_amount >= 0);
+        assert(_to != 0x0);
         balances[_to] = balances[_to].add(_amount);
         distributedSupply += int(_amount);
         Transfer(address(0), _to, _amount);
@@ -269,6 +274,7 @@ contract LamboCoin is ERC20_Base {
     }
     
     function completeDistribution() onlyOwner liveICO public returns (bool) {
+        assert(distributedSupply >= 0);
         assert(distributedSupply >= 0);
         uint remainingLambos = totalSupply - uint(distributedSupply);
         // ... distribute to us
