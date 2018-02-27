@@ -3,15 +3,16 @@ pragma solidity ^0.4.8;
 // LamboCoin - The Ferrari of coins
 //      - Ultra limited edition, only 250 coins released publicly!
 //      - the ORIGINAL collector coin
+//      - 256 total Lambos spawned, ever. This is a ONE TIME OFFER
 //      - 6 coins are retained for the developers (< 2.5% of all Lambos)
-//      - 256 total Lambos spawned
 //      - Lambos are distributed amongst the accounts at the end of the ICO
 //      who have sent the most Ether
 //      - Make sure your balance is above the CurrentPrice at the end of the
-//      ICO to get your Lambo(s). Don't miss out!!
+//      ICO to get your Lambo(s). Don't miss out!! Watch our git for end dates
 //      - send Ether straight to the contract address, it's that easy!
-//      - LamboCoin is an unowned ERC20 compliant contract, it will never 
-//      selfdestruct and you can trade it as you wish!
+//      - LamboCoin is an ERC20 compliant contract, it will never 
+//      selfdestruct and you can trade it as you wish with who you wish!
+//	- Add the coin to your interface, see our Git for details
 
 /**
  * Math operations with safety checks
