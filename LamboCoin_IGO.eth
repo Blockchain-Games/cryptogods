@@ -58,13 +58,14 @@ contract LamboICO {
     uint public investors;
     mapping(uint => address) private investorList;
     mapping(address => investorData) private investor;
-    address public LamboContract;
+    LamboCoin private LamboContract;
+    address public LamboContractAddress;
     
     // visible methods
     function userStatistics(address you) view public returns (uint amount, uint lambos) {
         require(currentPrice() > 0);
         amount = investor[you].paid;
-        lambos = div(investor[you].paid, currentPrice());
+        lambos = investor[you].paid.div(currentPrice());
     }
     
     function currentLamboPrice() view public returns (uint Ethers, uint Finneys) {
@@ -114,7 +115,7 @@ contract LamboICO {
             for (i = 1; i <= investors; i++) {
                 InvestAddr = investorList[i];
                 if (investor[InvestAddr].paid < lamboPrice) {
-                    distributedLambos = distributedLambos.add(div(investor[InvestAddr].paid, lamboPrice));
+                    distributedLambos = distributedLambos.add(investor[InvestAddr].paid.div(lamboPrice));
                 }
             }
             
@@ -133,33 +134,32 @@ contract LamboICO {
     function LamboICO() public {
         owner = msg.sender;
         // create new ERC20 contract
-        address lambo = new LamboCoin(maximumLambos + 6);
+        LamboContractAddress = new LamboCoin(maximumLambos + 6);
+        LamboContract = LamboCoin(LamboContractAddress);
     }
     
     function endICO() public {
         require(msg.sender == owner); // only die when I want it to
-        uint constant finalPrice = currentPrice();
+        uint finalPrice = currentPrice();
         // endow Lambos to winners
         uint i;
         for (i = 0; i <= investors; i++) {
             // for each investor
             address person = investorList[i];
-            uint lambosOwed = div(investor[person].paid, finalPrice);
+            uint lambosOwed = investor[person].paid.div(finalPrice);
             // give them (investor.paid / lamboprice) lambos
             if (lambosOwed > 0) {
-                lambo.distribution(person, lambosOwed);
+                LamboContract.distribute(person, lambosOwed);
             }
             // refund what we have to    
         }
-        lambo.completeDistribution();
+        LamboContract.completeDistribution();
         // kill this contract, LamboCoin contract ownership and remaining Lambos are passed to me (this.owner)
-        lambo.transfer(owner, lambo.balanceOf(this));
-        lambo.transferOwnership(owner);
+        LamboContract.transfer(owner, LamboContract.balanceOf(this));
+        LamboContract.transferOwnership(owner);
         selfdestruct(owner);
     }
 }
-
-pragma solidity ^0.4.19;
 
 // Token name: LamboCoin token
 // modded from source of contract 0xf7Dca20054469a1d548b20859a100B9EC6ff1f61
@@ -214,9 +214,10 @@ contract LamboCoin is ERC20_Base {
         _;
     }
     
-    modifier liveICO {        
-        require(distributedSupply <= totalSupply);
+    modifier liveICO() {        
+        require(distributedSupply <= int(totalSupply));
         require(distributedSupply >= 0);
+        _;
     }
     
     // mitigates the ERC20 short address attack
@@ -255,22 +256,23 @@ contract LamboCoin is ERC20_Base {
     }
     
     function transferOwnership(address newOwner) onlyOwner public {
-        require(newOwner != address(0))
+        require(newOwner != address(0));
         owner = newOwner;
     }
     
     ////////////////////////// ICO Functionality //////////////////////////
-    function distribution(address _to, uint256 _amount) onlyOwner liveICO public returns (bool) {
+    function distribute(address _to, uint256 _amount) onlyOwner liveICO public returns (bool) {
         balances[_to] = balances[_to].add(_amount);
-        distributedSupply = distributedSupply.add(_amount);
+        distributedSupply += int(_amount);
         Transfer(address(0), _to, _amount);
         return true;
     }
     
     function completeDistribution() onlyOwner liveICO public returns (bool) {
-        uint remainingLambos = totalSupply - distributedSupply;
+        assert(distributedSupply >= 0);
+        uint remainingLambos = totalSupply - uint(distributedSupply);
         // ... distribute to us
-        distribution(owner, remainingLambos);
+        distribute(owner, remainingLambos);
         distributedSupply = ICOComplete;         // flag ICO is over
     }
 
